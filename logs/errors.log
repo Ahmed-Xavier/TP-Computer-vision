@@ -1,0 +1,1 @@
+2026-09-25 15:21:13,914 | ERROR | find_corners | Page detection failed: No contours pass minimum area threshold. [total_contours=108, frame_w=800, frame_h=600, frame_area=480000, min_required_area=48000.0, candidates=0, largest_contour_area=2242.0, largest_area_ratio=0.0047, harris_keypoints=1564]

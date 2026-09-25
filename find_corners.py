@@ -38,32 +38,81 @@ def find_page_corners(image, keypoints, params: dict):
     Returns a 4x2 array of ordered corners (top-left, top-right, bottom-right, bottom-left),
     or None if no suitable contour is found.
     """
+    h, w = image.shape[:2]
+    frame_area = h * w
+    min_area = params["min_contour_area_ratio"] * frame_area
+    num_keypoints = len(keypoints) if keypoints is not None else 0
+
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     edges = cv2.Canny(blurred, 50, 150)
 
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    total_contours = len(contours) if contours else 0
+
     if not contours:
+        logger.error(
+            "Page detection failed: No contours found. "
+            "[total_contours=%d, frame_w=%d, frame_h=%d, frame_area=%d, min_required_area=%.1f, harris_keypoints=%d]",
+            total_contours,
+            w,
+            h,
+            frame_area,
+            min_area,
+            num_keypoints,
+        )
         return None
 
-    frame_area = image.shape[0] * image.shape[1]
-    min_area = params["min_contour_area_ratio"] * frame_area
-
     candidates = [c for c in contours if cv2.contourArea(c) >= min_area]
+    num_candidates = len(candidates)
+
     if not candidates:
+        largest_found_area = max([cv2.contourArea(c) for c in contours]) if contours else 0.0
+        largest_found_ratio = largest_found_area / frame_area if frame_area > 0 else 0.0
+        logger.error(
+            "Page detection failed: No contours pass minimum area threshold. "
+            "[total_contours=%d, frame_w=%d, frame_h=%d, frame_area=%d, "
+            "min_required_area=%.1f, candidates=%d, largest_contour_area=%.1f, "
+            "largest_area_ratio=%.4f, harris_keypoints=%d]",
+            total_contours,
+            w,
+            h,
+            frame_area,
+            min_area,
+            num_candidates,
+            largest_found_area,
+            largest_found_ratio,
+            num_keypoints,
+        )
         return None
 
     largest = max(candidates, key=cv2.contourArea)
+    largest_area = cv2.contourArea(largest)
+    largest_area_ratio = largest_area / frame_area if frame_area > 0 else 0.0
 
     perimeter = cv2.arcLength(largest, True)
     epsilon = params["approx_poly_epsilon"] * perimeter
     approx = cv2.approxPolyDP(largest, epsilon, True)
+    num_vertices = len(approx)
 
-    if len(approx) != 4:
+    if num_vertices != 4:
         logger.error(
-            "No quadrilateral: approx_vertices=%d, contour_area=%.1f",
-            len(approx),
-            cv2.contourArea(largest),
+            "Page detection failed: Largest candidate does not produce exactly 4 vertices. "
+            "[total_contours=%d, frame_w=%d, frame_h=%d, frame_area=%d, "
+            "min_required_area=%.1f, candidates=%d, largest_candidate_area=%.1f, "
+            "largest_candidate_area_ratio=%.4f, epsilon=%.2f, approx_vertices=%d, "
+            "harris_keypoints=%d]",
+            total_contours,
+            w,
+            h,
+            frame_area,
+            min_area,
+            num_candidates,
+            largest_area,
+            largest_area_ratio,
+            epsilon,
+            num_vertices,
+            num_keypoints,
         )
         return None
 
@@ -75,5 +124,25 @@ def find_page_corners(image, keypoints, params: dict):
         _snap_to_nearest_keypoint(corner, keypoints, radius)
         for corner in corners
     ])
+
+    logger.error(
+        "Page detection succeeded. "
+        "[total_contours=%d, frame_w=%d, frame_h=%d, frame_area=%d, "
+        "min_required_area=%.1f, candidates=%d, largest_candidate_area=%.1f, "
+        "largest_candidate_area_ratio=%.4f, epsilon=%.2f, approx_vertices=%d, "
+        "harris_keypoints=%d, corners=%s]",
+        total_contours,
+        w,
+        h,
+        frame_area,
+        min_area,
+        num_candidates,
+        largest_area,
+        largest_area_ratio,
+        epsilon,
+        num_vertices,
+        num_keypoints,
+        refined.tolist(),
+    )
 
     return refined
