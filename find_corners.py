@@ -1,5 +1,8 @@
 import cv2
 import numpy as np
+from logger import get_logger
+
+logger = get_logger(__name__)
 
 
 def _order_corners(pts):
@@ -57,7 +60,12 @@ def find_page_corners(image, keypoints, params: dict):
     approx = cv2.approxPolyDP(largest, epsilon, True)
 
     if len(approx) != 4:
-        return None
+    logger.error(
+        "No quadrilateral: approx_vertices=%d, contour_area=%.1f",
+        len(approx),
+        cv2.contourArea(largest),
+    )
+    return None
 
     corners = approx.reshape(4, 2)
     corners = _order_corners(corners)
