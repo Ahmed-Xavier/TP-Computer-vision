@@ -1,6 +1,8 @@
+from datetime import datetime
 import cv2
 import numpy as np
 from logger import get_logger
+from save import save_snapshot
 
 logger = get_logger(__name__)
 
@@ -43,11 +45,20 @@ def find_page_corners(image, keypoints, params: dict):
     min_area = params["min_contour_area_ratio"] * frame_area
     num_keypoints = len(keypoints) if keypoints is not None else 0
 
+    run_id = datetime.now().strftime("%H-%M-%S")
+
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     edges = cv2.Canny(blurred, 50, 150)
+    save_snapshot(edges, "01b_canny", run_id)
 
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours_preview = image.copy()
+    if len(contours_preview.shape) == 2:
+        contours_preview = cv2.cvtColor(contours_preview, cv2.COLOR_GRAY2BGR)
+    cv2.drawContours(contours_preview, contours, -1, (0, 255, 0), 2)
+    save_snapshot(contours_preview, "01c_contours", run_id)
+
     total_contours = len(contours) if contours else 0
 
     if not contours:
