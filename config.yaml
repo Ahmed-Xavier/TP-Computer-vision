@@ -1,0 +1,21 @@
+capture:
+  source: 0                     # webcam index, or path to image/video file
+  resize_width: 800             # downscale frame width for consistent processing speed
+
+harris:
+  block_size: 2                 # neighborhood size for the covariance matrix
+  ksize: 3                      # Sobel kernel aperture size
+  k: 0.04                       # Harris free parameter, typical range 0.04–0.06
+  threshold_ratio: 0.01         # keep keypoints above this fraction of max response
+
+corner_selection:
+  method: "hybrid"              # options: "hull" | "contour" | "hybrid"
+  min_contour_area_ratio: 0.1   # discard contours smaller than 10% of frame area
+  approx_poly_epsilon: 0.02     # Douglas-Peucker tolerance, fraction of perimeter
+  keypoint_search_radius: 15    # px radius to refine contour corners using nearby keypoints
+
+warp:
+  output_width: 800
+  output_height: 1100
+  interpolation: "linear"       # options: "linear" | "cubic"
+
